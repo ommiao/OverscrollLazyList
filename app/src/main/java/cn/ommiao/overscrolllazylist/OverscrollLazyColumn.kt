@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -25,9 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -42,12 +40,12 @@ fun OverscrollLazyColumn(
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
     userScrollEnabled: Boolean = true,
     overScrollConfiguration: OverScrollConfiguration = OverScrollConfiguration(),
-    columnContainerHeight: Dp,
+    overscrollContainerHeight: Dp,
     maxOverscrollHeight: Dp,
     onOverscrollHeightChange: (Float) -> Unit = {},
+    overscrollContent: @Composable () -> Unit,
     content: LazyListScope.() -> Unit
 ) {
-    val height = columnContainerHeight + maxOverscrollHeight
     val dynamicOffsetY = remember {
         mutableStateOf(0f)
     }
@@ -64,17 +62,10 @@ fun OverscrollLazyColumn(
             }
         )
     }
-
     val scrollConfiguration =
         if (dynamicOffsetY.value > 0 || state.firstVisibleItemIndex != 0 || state.firstVisibleItemScrollOffset != 0) overScrollConfiguration else null
     CompositionLocalProvider(LocalOverScrollConfiguration provides scrollConfiguration) {
-        Box(
-            modifier = modifier
-                .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                .height(height)
-                .offset { IntOffset(x = 0, y = dynamicOffsetY.value.roundToInt()) }
-                .nestedScroll(connection)
-        ) {
+        Box(modifier = modifier.nestedScroll(connection)) {
             LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
                 state = state,
@@ -84,7 +75,23 @@ fun OverscrollLazyColumn(
                 horizontalAlignment = horizontalAlignment,
                 flingBehavior = flingBehavior,
                 userScrollEnabled = userScrollEnabled,
-                content = content
+                content = {
+                    item {
+                        val dynamicOffsetYDp = with(LocalDensity.current) {
+                            dynamicOffsetY.value.toDp()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .height(overscrollContainerHeight - maxOverscrollHeight + dynamicOffsetYDp)
+                                .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
+                        ) {
+                            Box(modifier = Modifier.requiredHeight(overscrollContainerHeight)) {
+                                overscrollContent()
+                            }
+                        }
+                    }
+                    content()
+                }
             )
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,32 +55,38 @@ class MainActivity : ComponentActivity() {
                     val statusBarHeight = with(LocalDensity.current) {
                         insets.statusBars.top.toDp()
                     }
-                    val navigationBarHeight = with(LocalDensity.current) {
-                        insets.navigationBars.bottom.toDp()
-                    }
                     val topBarOffset = remember {
                         mutableStateOf(0f)
                     }
                     BoxWithConstraints {
-                        val screenHeight = maxHeight
                         OverscrollLazyColumn(
                             modifier = Modifier.navigationBarsPadding(),
-                            columnContainerHeight = screenHeight,
                             maxOverscrollHeight = 100.dp,
+                            overscrollContainerHeight = 456.dp,
                             onOverscrollHeightChange = {
                                 topBarOffset.value = it
+                            },
+                            overscrollContent = {
+                                Box {
+                                    Image(
+                                        painter = painterResource(id = R.mipmap.puppy3),
+                                        contentDescription = "",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(456.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Text(
+                                        text = "A little dog",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.h3,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .align(Alignment.BottomEnd)
+                                    )
+                                }
                             }
                         ) {
-                            item {
-                                Image(
-                                    painter = painterResource(id = R.mipmap.puppy3),
-                                    contentDescription = "",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(456.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
                             items(itemsList) { item ->
                                 Card(
                                     modifier = Modifier
