@@ -8,10 +8,6 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -23,10 +19,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
+/*
+   overscrollContent will be placed in the first item of LazyColumn
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OverscrollLazyColumn(
@@ -40,7 +41,6 @@ fun OverscrollLazyColumn(
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
     userScrollEnabled: Boolean = true,
     overScrollConfiguration: OverScrollConfiguration = OverScrollConfiguration(),
-    overscrollContainerHeight: Dp,
     maxOverscrollHeight: Dp,
     onOverscrollHeightChange: (Float) -> Unit = {},
     overscrollContent: @Composable () -> Unit,
@@ -65,34 +65,36 @@ fun OverscrollLazyColumn(
     val scrollConfiguration =
         if (dynamicOffsetY.value > 0 || state.firstVisibleItemIndex != 0 || state.firstVisibleItemScrollOffset != 0) overScrollConfiguration else null
     CompositionLocalProvider(LocalOverScrollConfiguration provides scrollConfiguration) {
-        Box(modifier = modifier.nestedScroll(connection)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxHeight(),
-                state = state,
-                contentPadding = contentPadding,
-                reverseLayout = reverseLayout,
-                verticalArrangement = verticalArrangement,
-                horizontalAlignment = horizontalAlignment,
-                flingBehavior = flingBehavior,
-                userScrollEnabled = userScrollEnabled,
-                content = {
-                    item {
-                        val dynamicOffsetYDp = with(LocalDensity.current) {
-                            dynamicOffsetY.value.toDp()
-                        }
-                        Box(
-                            modifier = Modifier
-                                .height(overscrollContainerHeight - maxOverscrollHeight + dynamicOffsetYDp)
-                                .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
-                        ) {
-                            Box(modifier = Modifier.requiredHeight(overscrollContainerHeight)) {
-                                overscrollContent()
+        LazyColumn(
+            modifier = modifier.nestedScroll(connection),
+            state = state,
+            contentPadding = contentPadding,
+            reverseLayout = reverseLayout,
+            verticalArrangement = verticalArrangement,
+            horizontalAlignment = horizontalAlignment,
+            flingBehavior = flingBehavior,
+            userScrollEnabled = userScrollEnabled,
+            content = {
+                item {
+                    Box(
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(
+                                placeable.width,
+                                (placeable.height - maxOffsetY + dynamicOffsetY.value).roundToInt()
+                            ) {
+                                placeable.place(
+                                    0,
+                                    (dynamicOffsetY.value - maxOffsetY).roundToInt()
+                                )
                             }
                         }
+                    ) {
+                        overscrollContent()
                     }
-                    content()
                 }
-            )
-        }
+                content()
+            }
+        )
     }
 }

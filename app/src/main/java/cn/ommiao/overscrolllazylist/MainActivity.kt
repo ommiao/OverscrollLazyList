@@ -6,23 +6,25 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +42,7 @@ import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
@@ -58,33 +61,17 @@ class MainActivity : ComponentActivity() {
                     val topBarOffset = remember {
                         mutableStateOf(0f)
                     }
-                    BoxWithConstraints {
+                    val scrollState = rememberLazyListState()
+                    Box {
                         OverscrollLazyColumn(
+                            state = scrollState,
                             modifier = Modifier.navigationBarsPadding(),
                             maxOverscrollHeight = 100.dp,
-                            overscrollContainerHeight = 456.dp,
                             onOverscrollHeightChange = {
                                 topBarOffset.value = it
                             },
                             overscrollContent = {
-                                Box {
-                                    Image(
-                                        painter = painterResource(id = R.mipmap.puppy3),
-                                        contentDescription = "",
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(456.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Text(
-                                        text = "A little dog",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.h3,
-                                        modifier = Modifier
-                                            .padding(16.dp)
-                                            .align(Alignment.BottomEnd)
-                                    )
-                                }
+                                OverscrollContent()
                             }
                         ) {
                             items(itemsList) { item ->
@@ -99,42 +86,73 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(text = item.title, color = Color.White)
+                                        Text(
+                                            text = item.title,
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.body2
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                    Card(
-                        backgroundColor = Color.White.copy(alpha = 0.88f),
-                        modifier = Modifier
-                            .padding(top = statusBarHeight)
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(56.dp)
-                            .offset { IntOffset(x = 0, y = topBarOffset.value.roundToInt()) },
-                        shape = RoundedCornerShape(28.dp)
-                    ) {
-                    }
+                    TopBar(statusBarHeight, topBarOffset, scrollState)
                 }
             }
         }
     }
-}
 
-val statusBarColor = Color(0xFFF1F1F1)
+    @Composable
+    private fun OverscrollContent() {
+        Box {
+            Image(
+                painter = painterResource(id = R.mipmap.puppy3),
+                contentDescription = "",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(456.dp),
+                contentScale = ContentScale.Crop
+            )
+            Text(
+                text = "A little dog",
+                color = Color.White,
+                style = MaterialTheme.typography.h3,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.BottomEnd)
+            )
+        }
+    }
 
-@Composable
-private fun MyAppBar(statusBarHeight: Dp) {
-    TopAppBar(
-        contentPadding = PaddingValues(top = statusBarHeight),
-        backgroundColor = statusBarColor
+    @OptIn(ExperimentalMaterialApi::class)
+    @Composable
+    private fun TopBar(
+        statusBarHeight: Dp,
+        topBarOffset: MutableState<Float>,
+        scrollState: LazyListState
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+        val scope = rememberCoroutineScope()
+        Card(
+            backgroundColor = Color.White.copy(alpha = 0.88f),
+            modifier = Modifier
+                .padding(top = statusBarHeight)
+                .fillMaxWidth()
+                .padding(16.dp)
+                .height(56.dp)
+                .offset { IntOffset(x = 0, y = topBarOffset.value.roundToInt()) },
+            shape = RoundedCornerShape(28.dp),
+            onClick = {
+                scope.launch {
+                    scrollState.animateScrollToItem(0)
+                }
+            }
         ) {
-            Text("Android")
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Back to top", style = MaterialTheme.typography.body1)
+            }
         }
     }
 }
