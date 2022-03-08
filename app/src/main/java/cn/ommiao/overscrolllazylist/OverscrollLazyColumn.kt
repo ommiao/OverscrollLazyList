@@ -1,5 +1,6 @@
 package cn.ommiao.overscrolllazylist
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.LocalOverScrollConfiguration
@@ -14,8 +15,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -23,6 +26,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
 /*
@@ -40,7 +45,7 @@ fun OverscrollLazyColumn(
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
     userScrollEnabled: Boolean = true,
-    overScrollConfiguration: OverScrollConfiguration = OverScrollConfiguration(),
+    overScrollConfiguration: OverScrollConfiguration? = OverScrollConfiguration(),
     maxOverscrollHeight: Dp,
     onOverscrollHeightChange: (Float) -> Unit = {},
     overscrollContent: @Composable () -> Unit,
@@ -62,9 +67,38 @@ fun OverscrollLazyColumn(
             }
         )
     }
-    val scrollConfiguration =
-        if (dynamicOffsetY.value > 0 || state.firstVisibleItemIndex != 0 || state.firstVisibleItemScrollOffset != 0) overScrollConfiguration else null
-    CompositionLocalProvider(LocalOverScrollConfiguration provides scrollConfiguration) {
+    val scrollConfigurationState = remember {
+        mutableStateOf(overScrollConfiguration)
+    }
+    LaunchedEffect(
+        dynamicOffsetY.value,
+        state.firstVisibleItemIndex,
+        state.firstVisibleItemScrollOffset
+    ) {
+        snapshotFlow {
+            ScrollOffsetState(
+                dynamicOffsetY.value,
+                state.firstVisibleItemIndex,
+                state.firstVisibleItemScrollOffset
+            )
+        }.distinctUntilChanged { old, new ->
+            val shouldRemoveOverscrollConfiguration = !old.isScrollToTop && new.isScrollToTop
+            val shouldAddOverScrollConfiguration =
+                scrollConfigurationState.value == null && (new.hasOffset || !new.isScrollToTop)
+            when {
+                shouldRemoveOverscrollConfiguration -> {
+                    scrollConfigurationState.value = null
+                }
+                shouldAddOverScrollConfiguration -> {
+                    scrollConfigurationState.value = overScrollConfiguration
+                }
+            }
+            old == new
+        }.collect()
+    }
+    CompositionLocalProvider(
+        LocalOverScrollConfiguration provides scrollConfigurationState.value
+    ) {
         LazyColumn(
             modifier = modifier.nestedScroll(connection),
             state = state,
@@ -97,4 +131,13 @@ fun OverscrollLazyColumn(
             }
         )
     }
+}
+
+internal data class ScrollOffsetState(
+    val dynamicOffsetY: Float = 0f,
+    val firstVisibleItemIndex: Int = 0,
+    val firstVisibleItemScrollOffset: Int = 0
+) {
+    val isScrollToTop = firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0
+    val hasOffset = dynamicOffsetY > 0
 }
