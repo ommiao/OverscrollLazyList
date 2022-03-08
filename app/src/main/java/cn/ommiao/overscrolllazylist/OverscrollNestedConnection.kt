@@ -8,6 +8,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
 
 class OverscrollNestedConnection(
     val scrollState: LazyListState,
@@ -54,23 +57,27 @@ class OverscrollNestedConnection(
 
     override suspend fun onPreFling(available: Velocity): Velocity {
         if (offsetY > 0) {
-            mutatorMutex.mutate {
-                animating = true
-                Animatable(offsetY).animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(200)
-                ) {
-                    offsetY = this.value
-                    onOverscrollHeightChange(this.value)
-                    if (this.value == 0f) {
-                        animating = false
-                    }
-                }
+            with(CoroutineScope(coroutineContext)) {
+                animateToZero()
             }
-            offsetY = 0f
-            onOverscrollHeightChange(0f)
-            return available
+            return super.onPreFling(available)
         }
         return super.onPreFling(available)
+    }
+
+    private fun CoroutineScope.animateToZero() = launch {
+        mutatorMutex.mutate {
+            animating = true
+            Animatable(offsetY).animateTo(
+                targetValue = 0f,
+                animationSpec = tween(200)
+            ) {
+                offsetY = this.value
+                onOverscrollHeightChange(this.value)
+                if (this.value == 0f) {
+                    animating = false
+                }
+            }
+        }
     }
 }

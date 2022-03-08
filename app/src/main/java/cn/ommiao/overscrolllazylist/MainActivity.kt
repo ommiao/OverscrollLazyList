@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(0f)
                     }
                     val scrollState = rememberLazyListState()
-                    BoxWithConstraints {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         val screenHeight = maxHeight
                         OverscrollLazyColumn(
                             state = scrollState,

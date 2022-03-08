@@ -1,6 +1,5 @@
 package cn.ommiao.overscrolllazylist
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.LocalOverScrollConfiguration
@@ -23,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -51,6 +51,9 @@ fun OverscrollLazyColumn(
     overscrollContent: @Composable () -> Unit,
     content: LazyListScope.() -> Unit
 ) {
+    val lazyColumnHeight = remember {
+        mutableStateOf(0)
+    }
     val dynamicOffsetY = remember {
         mutableStateOf(0f)
     }
@@ -82,15 +85,25 @@ fun OverscrollLazyColumn(
                 state.firstVisibleItemScrollOffset
             )
         }.distinctUntilChanged { old, new ->
-            val shouldRemoveOverscrollConfiguration = !old.isScrollToTop && new.isScrollToTop
-            val shouldAddOverScrollConfiguration =
-                scrollConfigurationState.value == null && (new.hasOffset || !new.isScrollToTop)
-            when {
-                shouldRemoveOverscrollConfiguration -> {
+            val isShowAllItems =
+                state.layoutInfo.totalItemsCount == state.layoutInfo.visibleItemsInfo.size
+            val isShowFullAllItems =
+                state.layoutInfo.visibleItemsInfo.sumOf { acc -> acc.size } - maxOffsetY < lazyColumnHeight.value
+            if (isShowAllItems && isShowFullAllItems) {
+                if (scrollConfigurationState.value != null) {
                     scrollConfigurationState.value = null
                 }
-                shouldAddOverScrollConfiguration -> {
-                    scrollConfigurationState.value = overScrollConfiguration
+            } else {
+                val shouldRemoveOverscrollConfiguration = !old.isScrollToTop && new.isScrollToTop
+                val shouldAddOverScrollConfiguration =
+                    scrollConfigurationState.value == null && (new.hasOffset || !new.isScrollToTop)
+                when {
+                    shouldRemoveOverscrollConfiguration -> {
+                        scrollConfigurationState.value = null
+                    }
+                    shouldAddOverScrollConfiguration -> {
+                        scrollConfigurationState.value = overScrollConfiguration
+                    }
                 }
             }
             old == new
@@ -100,7 +113,11 @@ fun OverscrollLazyColumn(
         LocalOverScrollConfiguration provides scrollConfigurationState.value
     ) {
         LazyColumn(
-            modifier = modifier.nestedScroll(connection),
+            modifier = modifier
+                .onSizeChanged {
+                    lazyColumnHeight.value = it.height
+                }
+                .nestedScroll(connection),
             state = state,
             contentPadding = contentPadding,
             reverseLayout = reverseLayout,
