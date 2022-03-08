@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier
                 .padding(16.dp)
+                .navigationBarsPadding()
                 .align(Alignment.BottomCenter)
         ) {
             Row {
