@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.OverScrollConfiguration
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -48,7 +49,7 @@ fun OverscrollLazyColumn(
     overScrollConfiguration: OverScrollConfiguration? = OverScrollConfiguration(),
     maxOverscrollHeight: Dp,
     onOverscrollHeightChange: (Float) -> Unit = {},
-    overscrollContent: @Composable () -> Unit,
+    overscrollContent: @Composable BoxScope.() -> Unit,
     content: LazyListScope.() -> Unit
 ) {
     val lazyColumnHeight = remember {
