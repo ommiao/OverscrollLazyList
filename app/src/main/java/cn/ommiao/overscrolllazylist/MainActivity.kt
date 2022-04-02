@@ -40,7 +40,6 @@ import cn.ommiao.overscrolllazylist.data.itemsList
 import cn.ommiao.overscrolllazylist.ui.theme.OverviewLazyListTheme
 import com.google.accompanist.insets.LocalWindowInsets
 import com.google.accompanist.insets.ProvideWindowInsets
-import com.google.accompanist.insets.navigationBarsPadding
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlin.math.roundToInt
 
@@ -68,7 +67,6 @@ class MainActivity : ComponentActivity() {
                         val screenHeight = maxHeight
                         OverscrollLazyColumn(
                             state = scrollState,
-                            modifier = Modifier.navigationBarsPadding(),
                             maxOverscrollHeight = 100.dp,
                             onOverscrollHeightChange = {
                                 topBarOffset.value = it
@@ -157,5 +155,6 @@ private fun SystemUiController() {
     val darkIcons = false
     SideEffect {
         systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = darkIcons)
+        systemUiController.setNavigationBarColor(color = Color.Transparent, darkIcons = darkIcons)
     }
 }

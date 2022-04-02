@@ -16,8 +16,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,10 +54,10 @@ fun OverscrollLazyColumn(
     overscrollContent: @Composable BoxScope.() -> Unit,
     content: LazyListScope.() -> Unit
 ) {
-    val lazyColumnHeight = remember {
+    var lazyColumnHeight by remember {
         mutableStateOf(0)
     }
-    val dynamicOffsetY = remember {
+    var dynamicOffsetY by remember {
         mutableStateOf(0f)
     }
     val maxOffsetY = with(LocalDensity.current) {
@@ -67,21 +69,21 @@ fun OverscrollLazyColumn(
             maxOffsetY = maxOffsetY,
             onOverscrollHeightChange = {
                 onOverscrollHeightChange(it)
-                dynamicOffsetY.value = it
+                dynamicOffsetY = it
             }
         )
     }
-    val scrollConfigurationState = remember {
+    var scrollConfigurationState by remember {
         mutableStateOf(overScrollConfiguration)
     }
     LaunchedEffect(
-        dynamicOffsetY.value,
+        dynamicOffsetY,
         state.firstVisibleItemIndex,
         state.firstVisibleItemScrollOffset
     ) {
         snapshotFlow {
             ScrollOffsetState(
-                dynamicOffsetY.value,
+                dynamicOffsetY,
                 state.firstVisibleItemIndex,
                 state.firstVisibleItemScrollOffset
             )
@@ -89,21 +91,21 @@ fun OverscrollLazyColumn(
             val isShowAllItems =
                 state.layoutInfo.totalItemsCount == state.layoutInfo.visibleItemsInfo.size
             val isShowFullAllItems =
-                state.layoutInfo.visibleItemsInfo.sumOf { acc -> acc.size } - maxOffsetY < lazyColumnHeight.value
+                state.layoutInfo.visibleItemsInfo.sumOf { acc -> acc.size } - maxOffsetY < lazyColumnHeight
             if (isShowAllItems && isShowFullAllItems) {
-                if (scrollConfigurationState.value != null) {
-                    scrollConfigurationState.value = null
+                if (scrollConfigurationState != null) {
+                    scrollConfigurationState = null
                 }
             } else {
                 val shouldRemoveOverscrollConfiguration = !old.isScrollToTop && new.isScrollToTop
                 val shouldAddOverScrollConfiguration =
-                    scrollConfigurationState.value == null && (new.hasOffset || !new.isScrollToTop)
+                    scrollConfigurationState == null && (new.hasOffset || !new.isScrollToTop)
                 when {
                     shouldRemoveOverscrollConfiguration -> {
-                        scrollConfigurationState.value = null
+                        scrollConfigurationState = null
                     }
                     shouldAddOverScrollConfiguration -> {
-                        scrollConfigurationState.value = overScrollConfiguration
+                        scrollConfigurationState = overScrollConfiguration
                     }
                 }
             }
@@ -111,12 +113,12 @@ fun OverscrollLazyColumn(
         }.collect()
     }
     CompositionLocalProvider(
-        LocalOverScrollConfiguration provides scrollConfigurationState.value
+        LocalOverScrollConfiguration provides scrollConfigurationState
     ) {
         LazyColumn(
             modifier = modifier
                 .onSizeChanged {
-                    lazyColumnHeight.value = it.height
+                    lazyColumnHeight = it.height
                 }
                 .nestedScroll(connection),
             state = state,
@@ -133,11 +135,11 @@ fun OverscrollLazyColumn(
                             val placeable = measurable.measure(constraints)
                             layout(
                                 placeable.width,
-                                (placeable.height - maxOffsetY + dynamicOffsetY.value).roundToInt()
+                                (placeable.height - maxOffsetY + dynamicOffsetY).roundToInt()
                             ) {
                                 placeable.place(
                                     0,
-                                    (dynamicOffsetY.value - maxOffsetY).roundToInt()
+                                    (dynamicOffsetY - maxOffsetY).roundToInt()
                                 )
                             }
                         }
